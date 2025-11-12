@@ -15,9 +15,8 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
-@Import(StudentServiceImpl.class) // ✅ importar el servicio real
+@Import(StudentServiceImpl.class)
 public class StudentServiceTest {
-
     @Autowired
     private StudentService service;
 
@@ -26,23 +25,20 @@ public class StudentServiceTest {
 
     @Test
     void shouldNotAllowDuplicateEmail() {
-        // given
-        Student existing = new Student();
+        Student existing =  new Student();
         existing.setFullName("Test User");
-        existing.setEmail("duplicate@example.com"); // ✅ corregido
+        existing.setEmail("diplucate@example.com");
         existing.setBirthDate(LocalDate.of(2000, 1, 1));
         existing.setActive(true);
+
         repository.save(existing);
 
-        // when
-        StudentRequestData req = new StudentRequestData();
+        StudentRequestData req =  new StudentRequestData();
         req.setFullName("New User Dup");
-        req.setEmail("duplicate@example.com"); // mismo email
+        req.setEmail("duplicate@example.com");
         req.setBirthDate(LocalDate.of(2000, 1, 1));
         req.setActive(true);
 
-        // then
-        assertThatThrownBy(() -> service.create(req))
-                .isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> service.create(req)).isInstanceOf(ConflictException.class);
     }
 }
