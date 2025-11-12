@@ -35,7 +35,7 @@ public class StudentServiceTest {
 
         StudentRequestData req =  new StudentRequestData();
         req.setFullName("New User Dup");
-        req.setEmail("duplicate@example.com");
+        req.setEmail("diplucate@example.com");
         req.setBirthDate(LocalDate.of(2000, 1, 1));
         req.setActive(true);
 
