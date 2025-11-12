@@ -1,5 +1,5 @@
 #Etapa1: Build
-FROM gradle:8.4-jdk24 AS builder
+FROM gradle:8.4-jdk21 AS builder
 WORKDIR /app
 COPY . .
 RUN gradle clean bootjar
