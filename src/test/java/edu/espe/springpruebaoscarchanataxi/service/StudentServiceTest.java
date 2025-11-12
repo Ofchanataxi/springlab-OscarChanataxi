@@ -11,10 +11,10 @@ import org.springframework.context.annotation.Import;
 
 import java.time.LocalDate;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
-@Import(StudentServiceTest.class)
+@Import(StudentService.class)
 public class StudentServiceTest {
     @Autowired
     private StudentService service;
@@ -34,7 +34,7 @@ public class StudentServiceTest {
 
         StudentRequestData req =  new StudentRequestData();
         req.setFullName("New User Dup");
-        req.setEmail("duplicate@example.com");
+        req.setEmail("diplucate@example.com");
         req.setBirthDate(LocalDate.of(2000, 1, 1));
         req.setActive(true);
 
