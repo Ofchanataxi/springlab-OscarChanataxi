@@ -3,6 +3,7 @@ package edu.espe.springpruebaoscarchanataxi.service;
 import edu.espe.springpruebaoscarchanataxi.domain.Student;
 import edu.espe.springpruebaoscarchanataxi.dto.StudentRequestData;
 import edu.espe.springpruebaoscarchanataxi.repository.StudentRepository;
+import edu.espe.springpruebaoscarchanataxi.service.impl.StudentServiceImpl;
 import edu.espe.springpruebaoscarchanataxi.web.advice.ConflictException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +15,7 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
-@Import(StudentService.class) // ✅ importar el servicio real
+@Import(StudentServiceImpl.class) // ✅ importar el servicio real
 public class StudentServiceTest {
 
     @Autowired
