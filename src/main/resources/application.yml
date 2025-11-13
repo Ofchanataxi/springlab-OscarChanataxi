@@ -24,6 +24,8 @@ spring:
   devtools:
     restart:
       enabled: true
+  application:
+    version: 1.0.0
 
 #Configurar el servidor embebido (Tomcat)
 server:
