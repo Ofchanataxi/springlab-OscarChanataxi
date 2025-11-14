@@ -98,10 +98,11 @@ public class StudentServiceTest {
 
         Object stats = service.getStats();
 
-        assertThat(stats).isInstanceOfAny(java.util.Map.class);
+        assertThat(stats).isInstanceOf(java.util.Map.class);
         java.util.Map<?, ?> statsMap = (java.util.Map<?, ?>) stats;
-        assertThat(statsMap.get("count")).isEqualTo(3);
-        assertThat(statsMap.get("activeCount")).isEqualTo(2);
-        assertThat(statsMap.get("inactiveCount")).isEqualTo(1);
+        assertThat(statsMap.get("total")).isEqualTo(3L);
+        assertThat(statsMap.get("active")).isEqualTo(2L);
+        assertThat(statsMap.get("inactive")).isEqualTo(1L);
     }
+
 }

@@ -10,6 +10,7 @@ import edu.espe.springpruebaoscarchanataxi.web.advice.NotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class StudentServiceImpl implements StudentService {
@@ -80,16 +81,18 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public Object getStats() {
+    public Map<String, Long> getStats() {
         Long totalStudents = repo.count();
         Long activeStudents = repo.countByActiveTrue();
         Long inactiveStudents = repo.countByActiveFalse();
-        return new Object(){
-            public final Long total = totalStudents;
-            public final Long active = activeStudents;
-            public final Long inactive = inactiveStudents;
-        };
+
+        return Map.of(
+                "total", totalStudents,
+                "active", activeStudents,
+                "inactive", inactiveStudents
+        );
     }
+
 
     private StudentResponse toResponse(Student student){
         StudentResponse response = new StudentResponse();
