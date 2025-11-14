@@ -35,10 +35,19 @@ public class StudentServiceTest {
 
         StudentRequestData req =  new StudentRequestData();
         req.setFullName("New User Dup");
-        req.setEmail("diplucate@example.com");
+        req.setEmail("test@example.com");
         req.setBirthDate(LocalDate.of(2000, 1, 1));
         req.setActive(true);
 
         assertThatThrownBy(() -> service.create(req)).isInstanceOf(ConflictException.class);
+    }
+
+    //verificar id enexistente
+    @Test
+    void inexistentIdShouldThrowException() {
+        Long nonexistentId = 9999L;
+
+        assertThatThrownBy(() -> service.getById(nonexistentId))
+                .isInstanceOf(ConflictException.class);
     }
 }
