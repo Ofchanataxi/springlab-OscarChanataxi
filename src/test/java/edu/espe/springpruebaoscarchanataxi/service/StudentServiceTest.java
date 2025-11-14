@@ -47,7 +47,7 @@ public class StudentServiceTest {
         assertThat(repository.findAll().get(0).getEmail()).isEqualTo("test@example.com");
     }
 
-    //verificar id inexistente
+    //Oscar Chanataxi
     @Test
     void inexistentIdShouldThrowNotFound() {
         Long nonexistentId = 999L;
@@ -57,4 +57,18 @@ public class StudentServiceTest {
                 .hasMessageContaining("Estudiante no encontrado");
     }
 
+    @Test
+    void deactivateStudentShouldSetActiveFalse() {
+        Student student = new Student();
+        student.setFullName("Oscar Chanataxi");
+        student.setEmail("ofchanataxi@espe.edu.ec");
+        student.setBirthDate(LocalDate.of(1995, 5, 15));
+        student.setActive(true);
+        repository.save(student);
+
+        service.deactivate(student.getId());
+
+        Student updated = repository.findById(student.getId()).orElseThrow();
+        assertThat(updated.getActive()).isFalse();
+    }
 }
