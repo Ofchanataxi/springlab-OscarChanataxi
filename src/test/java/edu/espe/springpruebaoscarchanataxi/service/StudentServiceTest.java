@@ -27,10 +27,10 @@ public class StudentServiceTest {
     void shouldNotAllowDuplicateEmail() {
         Student existing =  new Student();
         existing.setFullName("Test User");
-        existing.setEmail("diplucate@example.com");
+        existing.setEmail("test@example.com");
         existing.setBirthDate(LocalDate.of(2000, 1, 1));
         existing.setActive(true);
-
+//Oscar Chanataxi
         repository.save(existing);
 
         StudentRequestData req =  new StudentRequestData();
