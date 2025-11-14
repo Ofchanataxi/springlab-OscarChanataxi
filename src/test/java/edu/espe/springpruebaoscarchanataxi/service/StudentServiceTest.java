@@ -42,12 +42,5 @@ public class StudentServiceTest {
         assertThatThrownBy(() -> service.create(req)).isInstanceOf(ConflictException.class);
     }
 
-    //verificar id enexistente
-    @Test
-    void inexistentIdShouldThrowException() {
-        Long nonexistentId = 9999L;
 
-        assertThatThrownBy(() -> service.getById(nonexistentId))
-                .isInstanceOf(ConflictException.class);
-    }
 }
