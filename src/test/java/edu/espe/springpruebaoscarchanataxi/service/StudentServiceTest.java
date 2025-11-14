@@ -100,7 +100,8 @@ public class StudentServiceTest {
 
         assertThat(stats).isInstanceOfAny(java.util.Map.class);
         java.util.Map<?, ?> statsMap = (java.util.Map<?, ?>) stats;
-        assertThat(statsMap.get("activeCount")).isEqualTo(2L);
-        assertThat(statsMap.get("inactiveCount")).isEqualTo(1L);
+        assertThat(statsMap.get("count")).isEqualTo(3);
+        assertThat(statsMap.get("activeCount")).isEqualTo(2);
+        assertThat(statsMap.get("inactiveCount")).isEqualTo(1);
     }
 }

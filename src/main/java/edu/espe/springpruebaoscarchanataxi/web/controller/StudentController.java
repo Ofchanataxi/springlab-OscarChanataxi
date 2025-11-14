@@ -52,6 +52,6 @@ public class StudentController {
 
     @GetMapping("/stats")
     public ResponseEntity<Object> getStatistics() {
-        return ResponseEntity.ok(studentService.getStatistics());
+        return ResponseEntity.ok(studentService.getStats());
     }
 }
