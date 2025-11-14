@@ -47,5 +47,14 @@ public class StudentServiceTest {
         assertThat(repository.findAll().get(0).getEmail()).isEqualTo("test@example.com");
     }
 
+    //verificar id inexistente
+    @Test
+    void inexistentIdShouldThrowNotFound() {
+        Long nonexistentId = 999L;
+
+        assertThatThrownBy(() -> service.getById(nonexistentId))
+                .isInstanceOf(edu.espe.springpruebaoscarchanataxi.web.advice.NotFoundException.class)
+                .hasMessageContaining("Estudiante no encontrado");
+    }
 
 }
