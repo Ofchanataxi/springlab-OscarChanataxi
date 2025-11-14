@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Import;
 
 import java.time.LocalDate;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
@@ -40,6 +41,10 @@ public class StudentServiceTest {
         req.setActive(true);
 
         assertThatThrownBy(() -> service.create(req)).isInstanceOf(ConflictException.class);
+
+        assertThat(repository.count()).isEqualTo(1);
+        assertThat(repository.findAll()).hasSize(1);
+        assertThat(repository.findAll().get(0).getEmail()).isEqualTo("test@example.com");
     }
 
 
