@@ -80,7 +80,7 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public Object getStatistics() {
+    public Object getStats() {
         Long totalStudents = repo.count();
         Long activeStudents = repo.countByActiveTrue();
         Long inactiveStudents = repo.countByActiveFalse();

@@ -71,4 +71,36 @@ public class StudentServiceTest {
         Student updated = repository.findById(student.getId()).orElseThrow();
         assertThat(updated.getActive()).isFalse();
     }
+
+    //Oscar Chanataxi
+    @Test
+    void getStatsShouldReturnCorrectCounts() {
+        Student activeStudent1 = new Student();
+        activeStudent1.setFullName("Active One");
+        activeStudent1.setEmail("active1@example.com");
+        activeStudent1.setBirthDate(LocalDate.of(2000, 1, 1));
+        activeStudent1.setActive(true);
+        repository.save(activeStudent1);
+
+        Student activeStudent2 = new Student();
+        activeStudent2.setFullName("Active Two");
+        activeStudent2.setEmail("active2@example.com");
+        activeStudent2.setBirthDate(LocalDate.of(2001, 2, 2));
+        activeStudent2.setActive(true);
+        repository.save(activeStudent2);
+//Oscar Chanataxi
+        Student inactiveStudent1 = new Student();
+        inactiveStudent1.setFullName("Inactive One");
+        inactiveStudent1.setEmail("inactive1@example.com");
+        inactiveStudent1.setBirthDate(LocalDate.of(2000, 1, 1));
+        inactiveStudent1.setActive(false);
+        repository.save(inactiveStudent1);
+
+        Object stats = service.getStats();
+
+        assertThat(stats).isInstanceOfAny(java.util.Map.class);
+        java.util.Map<?, ?> statsMap = (java.util.Map<?, ?>) stats;
+        assertThat(statsMap.get("activeCount")).isEqualTo(2L);
+        assertThat(statsMap.get("inactiveCount")).isEqualTo(1L);
+    }
 }

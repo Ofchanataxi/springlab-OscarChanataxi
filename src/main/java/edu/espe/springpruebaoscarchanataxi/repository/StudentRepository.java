@@ -14,5 +14,4 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     long countByActiveTrue();
     //Contar estudiantes inactivos
     long countByActiveFalse();
-    //buscar estiudiante por ID
 }

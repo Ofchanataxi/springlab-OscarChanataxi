@@ -26,5 +26,5 @@ public interface StudentService {
     StudentResponse update(Long id, StudentRequestData request);
 
     //Estadisticas
-    Object getStatistics();
+    Object getStats();
 }
