@@ -121,7 +121,7 @@ public class StudentServiceTest {
         // Act
         Object stats = service.getStats();
 
-        // Assert
+
         assertThat(stats).isInstanceOf(java.util.Map.class);
         java.util.Map<?, ?> statsMap = (java.util.Map<?, ?>) stats;
 
