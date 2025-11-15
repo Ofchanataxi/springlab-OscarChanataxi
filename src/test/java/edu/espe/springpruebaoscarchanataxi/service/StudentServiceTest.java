@@ -127,6 +127,6 @@ public class StudentServiceTest {
 
         assertThat(statsMap.get("total")).isEqualTo(3L);
         assertThat(statsMap.get("active")).isEqualTo(2L);
-        assertThat(statsMap.get("inactive")).isEqualTo(2L);
+        assertThat(statsMap.get("inactive")).isEqualTo(1L);
     }
 }
