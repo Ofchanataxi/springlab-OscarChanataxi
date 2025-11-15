@@ -11,9 +11,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Solo despliega si CI fue exitoso
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,37 +20,122 @@ jobs:
       - name: Set version variables
         id: version
         run: |
-          # Generar versión basada en el número de ejecución
           APP_VERSION="v${{ github.run_number }}"
           BUILD_NUMBER="${{ github.run_number }}"
           COMMIT_HASH="${{ github.sha }}"
           COMMIT_SHORT="${COMMIT_HASH:0:7}"
           
-          # Exportar como variables de entorno
           echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
           echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
           
-          # Mostrar información
           echo "📦 Version: $APP_VERSION"
           echo "🔢 Build Number: $BUILD_NUMBER"
           echo "🔗 Commit: $COMMIT_SHORT"
 
       - name: Trigger Render Deploy
+        id: trigger-deploy
         run: |
-          echo "🚀 Deploying version ${{ env.APP_VERSION }} to Render..."
+          echo "🚀 Triggering deployment to Render..."
           
-          # Disparar el deploy hook
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" -ne 200 ] && [ "$HTTP_CODE" -ne 201 ]; then
+            echo "❌ Failed to trigger deploy"
+            exit 1
+          fi
           
           echo "✅ Deploy triggered successfully"
-          echo "📊 Check deployment status at: https://dashboard.render.com"
 
-      - name: Deployment summary
+      - name: Wait for deployment to start
         run: |
-          echo "### 🚀 Deployment Information" >> $GITHUB_STEP_SUMMARY
+          echo "⏳ Waiting 45 seconds for deployment to start..."
+          sleep 45
+
+      - name: Monitor deployment status
+        id: monitor-deploy
+        run: |
+          echo "🔍 Monitoring deployment status..."
+          
+          MAX_ATTEMPTS=20  # 20 intentos × 30 segundos = 10 minutos máximo
+          ATTEMPT=0
+          
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+          
+            # Obtener el estado del último deploy
+            DEPLOYS=$(curl -s -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+              "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys?limit=1")
+          
+            LATEST_STATUS=$(echo "$DEPLOYS" | jq -r '.[0].status')
+            LATEST_ID=$(echo "$DEPLOYS" | jq -r '.[0].id')
+            CREATED_AT=$(echo "$DEPLOYS" | jq -r '.[0].createdAt')
+          
+            echo "🔄 Attempt $ATTEMPT/$MAX_ATTEMPTS"
+            echo "   Deploy ID: $LATEST_ID"
+            echo "   Status: $LATEST_STATUS"
+            echo "   Created: $CREATED_AT"
+          
+            # Verificar si el deploy terminó exitosamente
+            if [ "$LATEST_STATUS" == "live" ]; then
+              echo "✅ Deployment successful!"
+              echo "deploy_status=success" >> $GITHUB_OUTPUT
+              echo "deploy_id=$LATEST_ID" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          
+            # Verificar si el deploy falló
+            if [ "$LATEST_STATUS" == "build_failed" ] || [ "$LATEST_STATUS" == "deactivated" ]; then
+              echo "❌ Deployment failed with status: $LATEST_STATUS"
+              echo "deploy_status=failed" >> $GITHUB_OUTPUT
+              echo "deploy_id=$LATEST_ID" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          
+            # Si está en progreso, esperar
+            if [ "$LATEST_STATUS" == "building" ] || [ "$LATEST_STATUS" == "deploying" ]; then
+              echo "⏳ Still deploying... waiting 30 seconds"
+              sleep 30
+              continue
+            fi
+          
+            # Estado desconocido
+            echo "⚠️ Unknown status: $LATEST_STATUS"
+            sleep 30
+          done
+          
+          # Timeout
+          echo "⏰ Deployment timeout after $((MAX_ATTEMPTS * 30)) seconds"
+          echo "deploy_status=timeout" >> $GITHUB_OUTPUT
+          exit 1
+
+      - name: Deployment successful summary
+        if: steps.monitor-deploy.outputs.deploy_status == 'success'
+        run: |
+          echo "### ✅ Deployment Successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** ${{ env.APP_VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Build Number:** ${{ env.BUILD_NUMBER }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit:** \`${{ env.COMMIT_HASH }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Triggered at:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deploy ID:** \`${{ steps.monitor-deploy.outputs.deploy_id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** 🟢 Live" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Deployment failed summary
+        if: failure()
+        run: |
+          echo "### ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ env.APP_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Number:** ${{ env.BUILD_NUMBER }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** \`${{ env.COMMIT_HASH }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deploy ID:** \`${{ steps.monitor-deploy.outputs.deploy_id || 'N/A' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** 🔴 Failed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Automatic rollback will be triggered**" >> $GITHUB_STEP_SUMMARY
