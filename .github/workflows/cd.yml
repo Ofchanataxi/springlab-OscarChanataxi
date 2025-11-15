@@ -33,55 +33,65 @@ jobs:
           echo "🔢 Build Number: $BUILD_NUMBER"
           echo "🔗 Commit: $COMMIT_SHORT"
 
+      - name: Get current deployment status
+        run: |
+          echo "📊 Current deployment status:"
+          
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys?limit=1")
+          
+          echo "$RESPONSE" | jq '.[0].deploy | {id, status, createdAt}' || echo "No deploys found"
+
       - name: Trigger Render Deploy
         id: trigger-deploy
         run: |
           echo "🚀 Triggering deployment to Render..."
           
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}")
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | head -n-1)
+          RESPONSE=$(curl -s -w "\nHTTP_CODE:%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}")
+          HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_CODE" | cut -d: -f2)
           
           echo "HTTP Status: $HTTP_CODE"
-          echo "Response: $BODY"
           
           if [ "$HTTP_CODE" -ne 200 ] && [ "$HTTP_CODE" -ne 201 ]; then
-            echo "❌ Failed to trigger deploy"
+            echo "❌ Failed to trigger deploy. HTTP Code: $HTTP_CODE"
             exit 1
           fi
           
-          echo "✅ Deploy triggered successfully"
+          echo "✅ Deploy webhook triggered successfully"
 
-      - name: Wait for deployment to start
+      - name: Wait for deployment to appear in API
         run: |
-          echo "⏳ Waiting 45 seconds for deployment to start..."
-          sleep 45
+          echo "⏳ Waiting 60 seconds for new deployment to appear..."
+          sleep 60
 
       - name: Monitor deployment status
         id: monitor-deploy
         run: |
           echo "🔍 Monitoring deployment status..."
           
-          MAX_ATTEMPTS=5  # 20 intentos × 30 segundos = 10 minutos máximo
+          MAX_ATTEMPTS=20
           ATTEMPT=0
           
           while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
             ATTEMPT=$((ATTEMPT + 1))
           
-            # Obtener el estado del último deploy
-            DEPLOYS=$(curl -s -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            # Obtener deploys de Render con la estructura correcta
+            RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
               "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys?limit=1")
           
-            LATEST_STATUS=$(echo "$DEPLOYS" | jq -r '.[0].status')
-            LATEST_ID=$(echo "$DEPLOYS" | jq -r '.[0].id')
-            CREATED_AT=$(echo "$DEPLOYS" | jq -r '.[0].createdAt')
+            # Extraer el estado del deploy (dentro del objeto "deploy")
+            LATEST_STATUS=$(echo "$RESPONSE" | jq -r '.[0].deploy.status // "unknown"')
+            LATEST_ID=$(echo "$RESPONSE" | jq -r '.[0].deploy.id // "unknown"')
+            CREATED_AT=$(echo "$RESPONSE" | jq -r '.[0].deploy.createdAt // "unknown"')
+            COMMIT_MSG=$(echo "$RESPONSE" | jq -r '.[0].deploy.commit.message // "unknown"')
           
             echo "🔄 Attempt $ATTEMPT/$MAX_ATTEMPTS"
             echo "   Deploy ID: $LATEST_ID"
             echo "   Status: $LATEST_STATUS"
+            echo "   Commit: $COMMIT_MSG"
             echo "   Created: $CREATED_AT"
           
-            # Verificar si el deploy terminó exitosamente
+            # Verificar estados finales exitosos
             if [ "$LATEST_STATUS" == "live" ]; then
               echo "✅ Deployment successful!"
               echo "deploy_status=success" >> $GITHUB_OUTPUT
@@ -89,16 +99,21 @@ jobs:
               exit 0
             fi
           
-            # Verificar si el deploy falló
-            if [ "$LATEST_STATUS" == "build_failed" ] || [ "$LATEST_STATUS" == "deactivated" ]; then
+            # Verificar estados de fallo
+            if [ "$LATEST_STATUS" == "build_failed" ] || \
+               [ "$LATEST_STATUS" == "canceled" ] || \
+               [ "$LATEST_STATUS" == "deactivated" ]; then
               echo "❌ Deployment failed with status: $LATEST_STATUS"
               echo "deploy_status=failed" >> $GITHUB_OUTPUT
               echo "deploy_id=$LATEST_ID" >> $GITHUB_OUTPUT
               exit 1
             fi
           
-            # Si está en progreso, esperar
-            if [ "$LATEST_STATUS" == "building" ] || [ "$LATEST_STATUS" == "deploying" ]; then
+            # Estados en progreso
+            if [ "$LATEST_STATUS" == "building" ] || \
+               [ "$LATEST_STATUS" == "deploying" ] || \
+               [ "$LATEST_STATUS" == "pre_deploy" ] || \
+               [ "$LATEST_STATUS" == "created" ]; then
               echo "⏳ Still deploying... waiting 30 seconds"
               sleep 30
               continue
@@ -110,7 +125,7 @@ jobs:
           done
           
           # Timeout
-          echo "⏰ Deployment timeout after $((MAX_ATTEMPTS * 30)) seconds"
+          echo "⏰ Deployment monitoring timeout"
           echo "deploy_status=timeout" >> $GITHUB_OUTPUT
           exit 1
 
@@ -121,10 +136,12 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** ${{ env.APP_VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Build Number:** ${{ env.BUILD_NUMBER }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit:** \`${{ env.COMMIT_HASH }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** \`${COMMIT_SHORT}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Deploy ID:** \`${{ steps.monitor-deploy.outputs.deploy_id }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Status:** 🟢 Live" >> $GITHUB_STEP_SUMMARY
           echo "- **Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+        env:
+          COMMIT_SHORT: ${{ env.COMMIT_HASH }}
 
       - name: Deployment failed summary
         if: failure()
@@ -138,4 +155,4 @@ jobs:
           echo "- **Status:** 🔴 Failed" >> $GITHUB_STEP_SUMMARY
           echo "- **Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Automatic rollback will be triggered**" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ **Automatic rollback will be triggered**" >> $GITHUB_STEP_SUMMARY
