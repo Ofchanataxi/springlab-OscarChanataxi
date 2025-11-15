@@ -62,7 +62,7 @@ jobs:
         run: |
           echo "🔍 Monitoring deployment status..."
           
-          MAX_ATTEMPTS=20  # 20 intentos × 30 segundos = 10 minutos máximo
+          MAX_ATTEMPTS=5  # 20 intentos × 30 segundos = 10 minutos máximo
           ATTEMPT=0
           
           while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
