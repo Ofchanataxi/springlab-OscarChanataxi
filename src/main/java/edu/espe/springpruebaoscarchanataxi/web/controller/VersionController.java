@@ -24,11 +24,6 @@ public class VersionController {
     @Value("${app.commit-hash}")
     private String commitHash;
 
-    /**
-     * Endpoint que retorna información de la versión actual de la aplicación
-     * Útil para verificar qué versión está desplegada en producción
-     * @return Map con datos de versión, build y commit
-     */
     @GetMapping("/version")
     public Map<String, String> getVersion() {
         Map<String, String> versionInfo = new HashMap<>();

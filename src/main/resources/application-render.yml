@@ -19,6 +19,11 @@ spring:
     init:
       mode: never
 
+app:
+  name: SpringLab CI/CD
+  version: ${APP_VERSION:dev}
+  build-number: ${BUILD_NUMBER:0}
+  commit-hash: ${COMMIT_HASH:unknown}
 #Configurar el servidor embebido (Tomcat)
 server:
   port: 8080

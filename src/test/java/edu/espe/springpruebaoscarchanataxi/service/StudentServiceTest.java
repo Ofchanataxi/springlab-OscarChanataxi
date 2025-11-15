@@ -15,50 +15,73 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * Pruebas unitarias para StudentService
+ * @author Oscar Chanataxi
+ */
 @DataJpaTest
 @Import(StudentServiceImpl.class)
 public class StudentServiceTest {
+
     @Autowired
     private StudentService service;
 
     @Autowired
     private StudentRepository repository;
 
+    /**
+     * Verifica que no se permitan emails duplicados
+     * Oscar Chanataxi
+     */
     @Test
     void shouldNotAllowDuplicateEmail() {
-        Student existing =  new Student();
+        // Arrange - Crear estudiante existente
+        Student existing = new Student();
         existing.setFullName("Test User");
         existing.setEmail("test@example.com");
         existing.setBirthDate(LocalDate.of(2000, 1, 1));
         existing.setActive(true);
-//Oscar Chanataxi
         repository.save(existing);
 
-        StudentRequestData req =  new StudentRequestData();
+        // Act - Intentar crear otro estudiante con el mismo email
+        StudentRequestData req = new StudentRequestData();
         req.setFullName("New User Dup");
-        req.setEmail("test@example.com");
+        req.setEmail("test@example.com"); // Email duplicado
         req.setBirthDate(LocalDate.of(2000, 1, 1));
         req.setActive(true);
 
-        assertThatThrownBy(() -> service.create(req)).isInstanceOf(ConflictException.class);
+        // Assert - Debe lanzar ConflictException
+        assertThatThrownBy(() -> service.create(req))
+                .isInstanceOf(ConflictException.class);
 
+        // Verificar que solo existe un estudiante
         assertThat(repository.count()).isEqualTo(1);
         assertThat(repository.findAll()).hasSize(1);
         assertThat(repository.findAll().get(0).getEmail()).isEqualTo("test@example.com");
     }
 
-    //Oscar Chanataxi
+    /**
+     * Verifica que buscar un ID inexistente lance NotFoundException
+     * Oscar Chanataxi
+     */
     @Test
     void inexistentIdShouldThrowNotFound() {
+        // Arrange
         Long nonexistentId = 999L;
 
+        // Act & Assert
         assertThatThrownBy(() -> service.getById(nonexistentId))
                 .isInstanceOf(edu.espe.springpruebaoscarchanataxi.web.advice.NotFoundException.class)
                 .hasMessageContaining("Estudiante no encontrado");
     }
 
+    /**
+     * Verifica que desactivar un estudiante establezca active en false
+     * Oscar Chanataxi
+     */
     @Test
     void deactivateStudentShouldSetActiveFalse() {
+        // Arrange
         Student student = new Student();
         student.setFullName("Oscar Chanataxi");
         student.setEmail("ofchanataxi@espe.edu.ec");
@@ -66,15 +89,21 @@ public class StudentServiceTest {
         student.setActive(true);
         repository.save(student);
 
+        // Act
         service.deactivate(student.getId());
 
+        // Assert
         Student updated = repository.findById(student.getId()).orElseThrow();
         assertThat(updated.getActive()).isFalse();
     }
 
-    //Oscar Chanataxi
+    /**
+     * Verifica que getStats retorne las cantidades correctas de estudiantes
+     * Oscar Chanataxi
+     */
     @Test
     void getStatsShouldReturnCorrectCounts() {
+        // Arrange - Crear 2 estudiantes activos
         Student activeStudent1 = new Student();
         activeStudent1.setFullName("Active One");
         activeStudent1.setEmail("active1@example.com");
@@ -88,7 +117,8 @@ public class StudentServiceTest {
         activeStudent2.setBirthDate(LocalDate.of(2001, 2, 2));
         activeStudent2.setActive(true);
         repository.save(activeStudent2);
-//Oscar Chanataxi
+
+        // Arrange - Crear 1 estudiante inactivo
         Student inactiveStudent1 = new Student();
         inactiveStudent1.setFullName("Inactive One");
         inactiveStudent1.setEmail("inactive1@example.com");
@@ -96,13 +126,15 @@ public class StudentServiceTest {
         inactiveStudent1.setActive(false);
         repository.save(inactiveStudent1);
 
+        // Act
         Object stats = service.getStats();
 
+        // Assert
         assertThat(stats).isInstanceOf(java.util.Map.class);
         java.util.Map<?, ?> statsMap = (java.util.Map<?, ?>) stats;
+
         assertThat(statsMap.get("total")).isEqualTo(3L);
         assertThat(statsMap.get("active")).isEqualTo(2L);
         assertThat(statsMap.get("inactive")).isEqualTo(1L);
     }
-
 }
