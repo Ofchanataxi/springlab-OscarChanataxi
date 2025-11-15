@@ -1,14 +1,13 @@
 # Etapa 1: Build
-FROM gradle:8.5-jdk17 AS build
+FROM gradle:8.5-jdk21 AS builder
 WORKDIR /app
 
-COPY build.gradle settings.gradle gradlew ./
-COPY gradle ./gradle
-COPY src ./src
+COPY . .
+RUN gradle clean bootjar
 
 
 # Etapa 2: Runtime
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:21
 WORKDIR /app
 
 # Variables de versión
@@ -21,7 +20,7 @@ ENV BUILD_NUMBER=${BUILD_NUMBER}
 ENV COMMIT_HASH=${COMMIT_HASH}
 
 # Copiar JAR
-COPY --from=build /app/build/libs/*.jar app.jar
+COPY --from=builder /app/build/libs/*.jar app.jar
 
 # Exponer puerto
 EXPOSE 8080
