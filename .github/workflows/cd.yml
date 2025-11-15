@@ -1,3 +1,5 @@
+name: CD - Deploy to Render
+
 on:
   workflow_run:
     workflows: ["CI - Build and Test"]
@@ -9,8 +11,47 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Solo despliega si CI fue exitoso
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set version variables
+        id: version
+        run: |
+          # Generar versión basada en el número de ejecución
+          APP_VERSION="v${{ github.run_number }}"
+          BUILD_NUMBER="${{ github.run_number }}"
+          COMMIT_HASH="${{ github.sha }}"
+          COMMIT_SHORT="${COMMIT_HASH:0:7}"
+          
+          # Exportar como variables de entorno
+          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+          echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
+          
+          # Mostrar información
+          echo "📦 Version: $APP_VERSION"
+          echo "🔢 Build Number: $BUILD_NUMBER"
+          echo "🔗 Commit: $COMMIT_SHORT"
+
       - name: Trigger Render Deploy
         run: |
-          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+          echo "🚀 Deploying version ${{ env.APP_VERSION }} to Render..."
+          
+          # Disparar el deploy hook
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+          
+          echo "✅ Deploy triggered successfully"
+          echo "📊 Check deployment status at: https://dashboard.render.com"
+
+      - name: Deployment summary
+        run: |
+          echo "### 🚀 Deployment Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ env.APP_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Number:** ${{ env.BUILD_NUMBER }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** \`${{ env.COMMIT_HASH }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered at:** $(date -u)" >> $GITHUB_STEP_SUMMARY

@@ -1,40 +1,24 @@
-name: Manual Rollback
 on:
-  workflow_dispatch: # Permite ejecutarlo manualmente desde GitHub Actions
+  workflow_run:
+    workflows: ["CD - Deploy to Render"]
+    types:
+      - completed
 
 jobs:
   rollback:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     steps:
-      - name: Install JQ
-        run: sudo apt-get install -y jq
-
-      - name: Revert to last successful deploy
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+      - name: Get last successful deploy
+        id: get-deploy
         run: |
-          echo "Buscando despliegues previos..."
-          
-          # 1. Obtener la lista de despliegues y filtrar el último que estuvo 'live' y 'finished'
-          # Nota: La lógica busca el primer deploy con status "live" que no sea el actual fallido si fuera el caso.
-          # Para simplificar, tomaremos el ID del último deploy exitoso anterior al actual.
-          
-          DEPLOY_ID=$(curl -s --request GET \
-            --url "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys?limit=20" \
-            --header "Authorization: Bearer ${RENDER_API_KEY}" \
-            | jq -r '.[] | select(.status == "live") | .id' | head -n 1)
+          LAST_SUCCESS=$(curl -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys \
+            | jq -r '.[] | select(.status=="live") | .id' | head -1)
+          echo "deploy_id=$LAST_SUCCESS" >> $GITHUB_OUTPUT
 
-          if [ -z "$DEPLOY_ID" ]; then
-            echo "No se encontró un despliegue previo exitoso."
-            exit 1
-          fi
-
-          echo "Realizando Rollback al deploy ID: $DEPLOY_ID"
-
-          curl -s --request POST \
-            --url "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys/${DEPLOY_ID}" \
-            --header "Authorization: Bearer ${RENDER_API_KEY}" \
-            --header "Content-Type: application/json"
-
-          echo "Rollback iniciado exitosamente."
+      - name: Rollback to last successful deploy
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys/${{ steps.get-deploy.outputs.deploy_id }}/rollback
