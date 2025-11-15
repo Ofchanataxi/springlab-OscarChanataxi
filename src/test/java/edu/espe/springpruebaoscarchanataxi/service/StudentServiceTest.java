@@ -15,10 +15,6 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Pruebas unitarias para StudentService
- * @author Oscar Chanataxi
- */
 @DataJpaTest
 @Import(StudentServiceImpl.class)
 public class StudentServiceTest {
@@ -29,10 +25,6 @@ public class StudentServiceTest {
     @Autowired
     private StudentRepository repository;
 
-    /**
-     * Verifica que no se permitan emails duplicados
-     * Oscar Chanataxi
-     */
     @Test
     void shouldNotAllowDuplicateEmail() {
         // Arrange - Crear estudiante existente

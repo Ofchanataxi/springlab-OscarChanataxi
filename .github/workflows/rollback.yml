@@ -1,6 +1,6 @@
 on:
   workflow_run:
-    workflows: ["CD - Deploy to Render"]
+    workflows: ["CI - Build and Test"]
     types:
       - completed
 
